@@ -1,0 +1,31 @@
+{
+  "teamAssignments": {
+    "Team 1": ["Ryan Barrett", "Erika DiPasquale", "Zoe Kelly", "Colin Kunze", "Belle Ye", "Liam Kelly", "Susan Kelly", "Mark Roberto"],
+    "Team 2": ["Brendan Lally", "Jack Larch", "Michelle Larch", "Emma Roney", "Shannon Simmons", "Emma Skilton", "Anusha Pasupuleti", "Thomas Fitzmaurice"],
+    "Team 3": ["Yoseph Dance", "Anas Hamad", "Kevin Michaud", "Neil Nagano-Young", "Jonathan Parrish", "Logan Riley", "Vieno Carter", "Dorly Bouguignon"],
+    "Team 4": ["Maddie Rogers", "Alexis Bouguignon", "Julia Clegg", "Jourdan Ewoldt", "Param Desai", "Allie Evans", "Brian Fitzmaurice", "Josh Fung"],
+    "Team 5": ["Esther Fung", "Joshua Goroff", "Sukrana Hamad", "Christian Horn", "Skye Davis", "Ashlyn Kelly", "Michael Young", "Chris Kelly"],
+    "Team 6": ["Janet Dornbusch", "Dan Kelly", "Gilly Kelly", "Josh Tarver", "Haley Alderman", "Ryan Kelly", "Dani Fay", "Sean Kelly"],
+    "Team 7": ["Gregory Kelly", "Natalie Godinez", "Monica Nagano-Young", "Susan Nazzaro", "Margaret Onken", "Ryan Klink", "Samantha Kennedy", "Alejandro Pinedo"],
+    "Team 8": ["Priya Ponnapula", "Mohammad Rahim", "Robbie Kennedy", "Patrick Laird", "Kevin Tsai"]
+  },
+  "wordCategories": {
+    "twist": ["Corkscrew", "Tornado", "Dance", "Ankle"],
+    "homophones": ["Knight", "Seam", "Flour", "Write"],
+    "silent letter": ["Knife", "Wrestle", "Psychic", "Subtle"],
+    "strike": ["Match", "Pose", "Chord", "Deal"],
+    "crack": ["Code", "Joke", "Egg", "Window"],
+    "hybrid": ["Centaur", "Griffin", "Chimera", "Sphinx"],
+    "verb": ["Ram", "Duck", "Bear", "Hawk"],
+    "palindrome": ["Civic", "Deed", "Level", "Rotor"],
+    "red": ["Crimson", "Garnet", "Cherry", "Brick"],
+    "money": ["Bread", "Cheddar", "Stacks", "Dough"],
+    "bite": ["Lip", "Bullet", "Nail", "Tongue"],
+    "triangle": ["Love", "Bermuda", "Scalene", "Right"],
+    "break": ["Record", "Silence", "Seal", "Promise"],
+    "spring": ["Bloom", "Thaw", "Sprout", "Rain"],
+    "flip": ["Coin", "Pancake", "Switch", "Table"],
+    "dog": ["Moses", "Dragon", "Pikachu", "Daisy"],
+    "cat": ["Newton", "Lilo", "Sammy", "Luna"]
+  }
+} 

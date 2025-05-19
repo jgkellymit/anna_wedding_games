@@ -1,0 +1,26 @@
+{
+  "name": "wedding-field-day-game",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "description": "A mobile-first web app for a wedding field day event, including a login page, info tab, and an interactive \"assassins\" word game.",
+  "main": "index.js",
+  "scripts": {
+    "test": "cd server && npm test",
+    "test:server": "cd server && npm test",
+    "test:client": "cd client && npm test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

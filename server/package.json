@@ -1,0 +1,17 @@
+{
+  "name": "wedding-field-day-game-server",
+  "version": "1.0.0",
+  "description": "Server for wedding field day game",
+  "main": "index.js",
+  "scripts": {
+    "test": "NODE_ENV=test jest",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+} 
