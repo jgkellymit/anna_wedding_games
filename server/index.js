@@ -40,8 +40,51 @@ const PORT = process.env.PORT || 3001;
 const gameData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data.json'), 'utf8'));
 const { teamAssignments, wordCategories } = gameData;
 
-// Generate names list from team assignments
-const names = Object.values(teamAssignments).flat();
+// Admin users
+const adminUsers = {
+  "Anna Kelly": { password: "iamironman", isAdmin: true },
+  "Pat Lally": { password: "iamironman", isAdmin: true }
+};
+
+// Generate names list from team assignments and add admin users
+const names = [...Object.values(teamAssignments).flat(), ...Object.keys(adminUsers)];
+
+// Get list of event names from data
+const eventNames = [
+  'Assassins',
+  'Name Game',
+  'Grapes',
+  'Flip Cup',
+  'Finish the Lyric',
+  'Water Balloon Toss',
+  'Amazing Race',
+  'Relay Race'
+];
+
+const miniGames = [
+  'Spike',
+  'Disc Golf',
+  'Liars Dice',
+  'Pickleball',
+  'Speed Puzzle'
+];
+
+// Scoring options for each event (using the data from FieldDayInfo)
+const scoringOptions = {
+  'Assassins': 'Variable', // Assassin scores are calculated automatically
+  'Name Game': [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0],
+  'Grapes': [100, 80, 60, 50, 40, 30, 20, 10, 0],
+  'Flip Cup': [100, 80, 60, 50, 40, 30, 20, 10, 0],
+  'Finish the Lyric': [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0],
+  'Water Balloon Toss': [100, 80, 60, 50, 40, 30, 20, 10, 0],
+  'Amazing Race': [100, 80, 60, 50, 40, 30, 20, 10, 0],
+  'Relay Race': [400, 300, 200, 100, 0],
+  'Spike': [50, 40, 30, 20, 10, 0],
+  'Disc Golf': [50, 40, 30, 20, 10, 0],
+  'Liars Dice': [50, 40, 30, 20, 10, 0],
+  'Pickleball': [50, 40, 30, 20, 10, 0],
+  'Speed Puzzle': [50, 40, 30, 20, 10, 0]
+};
 
 // User state storage
 const userStates = new Map();
@@ -69,40 +112,178 @@ async function writeScoresFile(scores) {
   await fsPromises.rename(tempPath, finalPath);
 }
 
+// Read/write event scores
+async function readEventScoresFile() {
+  try {
+    const data = await fsPromises.readFile(path.join(__dirname, 'event_scores.json'), 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      // Initialize with default structure
+      const defaultScores = {};
+      Object.keys(teamAssignments).forEach(team => {
+        defaultScores[team] = {
+          events: {},
+          miniGames: {}
+        };
+        
+        // Initialize all events with 0
+        eventNames.forEach(event => {
+          defaultScores[team].events[event] = 0;
+        });
+        
+        // Initialize all mini games with 0
+        miniGames.forEach(game => {
+          defaultScores[team].miniGames[game] = 0;
+        });
+      });
+      
+      return defaultScores;
+    }
+    throw error;
+  }
+}
+
+async function writeEventScoresFile(scores) {
+  const tempPath = path.join(__dirname, 'event_scores.json.tmp');
+  const finalPath = path.join(__dirname, 'event_scores.json');
+  
+  await fsPromises.writeFile(tempPath, JSON.stringify(scores, null, 2));
+  await fsPromises.rename(tempPath, finalPath);
+}
+
 // Initialize scores from file or create new if doesn't exist
 let globalScores = {};
+let eventScores = {};
 
 // Precompute assigned words and selected themes for all players
 function precomputeAllPlayerData() {
-  names.forEach(playerName => {
-    const nameSeed = playerName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const allThemesRaw = Object.entries(wordCategories);
+  // Get all words from all categories
+  const allWords = [];
+  const wordToCategory = {}; // Map to track which category each word belongs to
+  
+  Object.entries(wordCategories).forEach(([category, words]) => {
+    words.forEach(word => {
+      allWords.push(word);
+      wordToCategory[word] = category;
+    });
+  });
+  
+  // Get the list of players (excluding admin users)
+  const allPlayers = Object.values(teamAssignments).flat(); // Make a copy to avoid modifying the original
+  
+  // Check if we have the right number of words and players
+  const extraWords = allWords.length - allPlayers.length;
+  const extraPlayers = allPlayers.length - allWords.length;
+  
+  // Handle cases with extra words or players
+  if (extraWords > 0) {
+    // We have more words than players, add special players
+    if (extraWords > 2) {
+      throw new Error(`Too many extra words (${extraWords}). Maximum allowed is 2.`);
+    }
     
-    const selectedThemesArray = allThemesRaw
-      .map((theme, index) => ({ theme, sortKey: (nameSeed * (index + 1)) % allThemesRaw.length }))
-      .sort((a, b) => a.sortKey - b.sortKey)
-      .map(item => item.theme)
-      .slice(0, 5); // Array of [themeName, [words]]
-      
-    const wordsForUser = selectedThemesArray.reduce((acc, [_, themeWords]) => [...acc, ...themeWords], []);
-    const assignedWord = wordsForUser[nameSeed % wordsForUser.length];
+    const specialPlayers = ["Anna Kelly", "Pat Lally"];
+    for (let i = 0; i < extraWords; i++) {
+      allPlayers.push(specialPlayers[i]);
+    }
+    console.log(`Added ${extraWords} special players to match word count`);
+  } else if (extraPlayers > 0) {
+    // We have more players than words, remove some players
+    if (extraPlayers > 4) {
+      throw new Error(`Too many extra players (${extraPlayers}). Maximum allowed is 4.`);
+    }
+    
+    const playersToRemove = ["Jack Larch", "Michelle Larch", "Anna Kelly", "Pat Lally"];
+    for (let i = 0; i < extraPlayers; i++) {
+      const playerToRemove = playersToRemove[i];
+      const index = allPlayers.indexOf(playerToRemove);
+      if (index !== -1) {
+        allPlayers.splice(index, 1);
+      } else {
+        console.warn(`Player ${playerToRemove} not found in the list, skipping removal`);
+      }
+    }
+    console.log(`Removed ${extraPlayers} players to match word count`);
+  }
+  
+  // Now we should have equal number of players and words
+  if (allPlayers.length !== allWords.length) {
+    console.error(`Player count (${allPlayers.length}) does not match word count (${allWords.length}) after adjustments`);
+  } else {
+    console.log(`Player count (${allPlayers.length}) matches word count (${allWords.length})`);
+  }
+  
+  // Shuffle the words deterministically based on a fixed seed
+  const shuffledWords = [...allWords].sort(() => 0.5 - Math.random());
+  
+  // Assign one word to each player
+  const playerWordMap = {};
+  allPlayers.forEach((player, index) => {
+    playerWordMap[player] = shuffledWords[index];
+  });
+  
+  // For each player, select 5 themes, making sure to exclude the theme containing their word
+  allPlayers.forEach(playerName => {
+    // Skip admin users who are not assigned words
+    if (adminUsers[playerName]) {
+      return;
+    }
+    
+    const playerWord = playerWordMap[playerName];
+    const playerWordCategory = wordToCategory[playerWord];
+    
+    // Get all themes except the one containing the player's word
+    const availableThemes = Object.entries(wordCategories).filter(([category, _]) => category !== playerWordCategory);
+    
+    // If we have fewer than 5 available themes, we'll need to include the player's theme
+    let selectedThemes;
+    if (availableThemes.length < 5) {
+      console.warn(`Not enough themes to exclude player's theme for ${playerName}. Including their theme.`);
+      selectedThemes = Object.entries(wordCategories)
+        .map(theme => ({ theme, sortKey: Math.random() }))
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .map(item => item.theme)
+        .slice(0, 5);
+    } else {
+      // Randomly select 5 themes from available themes
+      selectedThemes = availableThemes
+        .map(theme => ({ theme, sortKey: Math.random() }))
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .map(item => item.theme)
+        .slice(0, 5);
+    }
     
     allPlayerInitialData[playerName] = {
-      assignedWord: assignedWord,
-      selectedThemesArray: selectedThemesArray, // Retain order for board construction
-      selectedThemesObject: Object.fromEntries(selectedThemesArray) // For quick lookup
+      assignedWord: playerWord,
+      selectedThemesArray: selectedThemes,
+      selectedThemesObject: Object.fromEntries(selectedThemes)
     };
   });
+  
+  // Set up admin users with special data
+  Object.keys(adminUsers).forEach(adminName => {
+    allPlayerInitialData[adminName] = {
+      isAdmin: true,
+      assignedWord: "Admin", // Special value indicating admin status
+      selectedThemesArray: [],
+      selectedThemesObject: {}
+    };
+  });
+  
   console.log("Precomputed initial data for all players.");
+  return allPlayerInitialData;
 }
 
 async function initializeServerState() {
   try {
     globalScores = await readScoresFile();
+    eventScores = await readEventScoresFile();
     precomputeAllPlayerData(); // This needs 'names' and 'wordCategories' to be loaded
   } catch (error) {
     console.error('Error initializing server state:', error);
     globalScores = {};
+    eventScores = {};
     // Handle potential errors in precomputeAllPlayerData if necessary
   }
 }
@@ -111,6 +292,24 @@ initializeServerState();
 
 // Function to initialize user state
 function initializeUserState(guesserName) {
+  // For admin users, return admin user state
+  if (adminUsers[guesserName]) {
+    const userState = {
+      isAdmin: true,
+      assignedWord: "Admin",
+      boardLayout: [],
+      guesses: {},
+      themeGuesses: {},
+      scores: {
+        correctGuesses: 0,
+        correctCategories: 0,
+        total: 0
+      }
+    };
+    userStates.set(guesserName, userState);
+    return userState;
+  }
+
   if (userStates.has(guesserName)) {
     return userStates.get(guesserName);
   }
@@ -123,72 +322,56 @@ function initializeUserState(guesserName) {
 
   const guesserAssignedWord = guesserData.assignedWord;
   const guesserThemesArrayForBoard = guesserData.selectedThemesArray;
-
-  // Create a pool of available players and shuffle it deterministically for this guesser
-  const guesserNameSeed = guesserName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const availablePlayers = names
-    .filter(n => n !== guesserName)
-    .map((player, index) => ({ 
-      player, 
-      word: allPlayerInitialData[player].assignedWord,
-      sortKey: (guesserNameSeed * index * 31) % names.length 
-    }))
-    .sort((a, b) => a.sortKey - b.sortKey);
+    
+  // Create a pool of available players, excluding the guesser
+  const availablePlayers = Object.keys(allPlayerInitialData)
+    .filter(name => name !== guesserName && !adminUsers[name]);
 
   // Set to track players already used on the board
   let usedPlayersOnBoard = new Set([guesserName]);
   
   // Properly structured board with exactly 5 columns of 4 players each
   let boardColumns = [];
-  
-  // For each theme, create a column of 4 unique players
+    
+  // For each theme, create a column of 4 unique players whose words match the theme
   for (const [themeName, wordsInTheme] of guesserThemesArrayForBoard) {
-    // For this theme, find players whose words match AND who aren't already used
-    let playersForTheme = [];
-    let usedWordsInThisTheme = new Set(); // Track words used in this theme to avoid duplicates
+    // Find all players who have words from this theme
+    let playersWithThemeWords = availablePlayers.filter(player => 
+      wordsInTheme.includes(allPlayerInitialData[player].assignedWord) && 
+      !usedPlayersOnBoard.has(player)
+    );
     
-    // First pass: try to get players with different words from this theme
-    for (const { player, word } of availablePlayers) {
-      if (usedPlayersOnBoard.has(player)) continue;
-      if (usedWordsInThisTheme.has(word)) continue;
-      
-      if (wordsInTheme.includes(word)) {
-        playersForTheme.push(player);
-        usedPlayersOnBoard.add(player);
-        usedWordsInThisTheme.add(word);
-        
-        // We've found 4 players with different words for this theme
-        if (playersForTheme.length === 4) break;
-      }
+    // Shuffle these players using a more random approach
+    const seed = Math.random() * 1000; // Use a random seed instead of deterministic
+    playersWithThemeWords = playersWithThemeWords
+      .map(player => ({ 
+        player, 
+        sortKey: Math.random() * seed // Use Math.random() for true randomness
+      }))
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .map(item => item.player);
+    
+    // Take up to 4 players for this column
+    const playersForTheme = playersWithThemeWords.slice(0, 4);
+
+    // If we don't have 4 players, fill with empty strings
+    while (playersForTheme.length < 4) {
+      playersForTheme.push("");
     }
     
-    // If we couldn't find 4 unique players with different theme words, fill with other players
-    if (playersForTheme.length < 4) {
-      console.warn(`Theme ${themeName} only found ${playersForTheme.length} matching players. Filling remainder with non-matching players.`);
-      
-      // Fill with remaining players not yet used on the board
-      for (const { player } of availablePlayers) {
-        if (!usedPlayersOnBoard.has(player)) {
-          playersForTheme.push(player);
-          usedPlayersOnBoard.add(player);
-          
-          if (playersForTheme.length === 4) break;
-        }
-      }
-    }
-    
-    // Ensure we have exactly 4 players in this column
-    if (playersForTheme.length !== 4) {
-      console.warn(`Could not find 4 unique players for theme ${themeName}. Got ${playersForTheme.length} players.`);
-      
-      // If we somehow still don't have 4 players (unlikely), pad with empty strings
-      while (playersForTheme.length < 4) {
-        playersForTheme.push("");
-      }
-    }
+    // Mark these players as used
+    playersForTheme.forEach(player => {
+      if (player) usedPlayersOnBoard.add(player);
+    });
     
     boardColumns.push(playersForTheme);
   }
+
+  // Shuffle the columns randomly to ensure random theme distribution
+  boardColumns = boardColumns
+    .map((column, index) => ({ column, sortKey: Math.random() }))
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .map(item => item.column);
 
   // Ensure we have exactly 5 columns
   while (boardColumns.length < 5) {
@@ -203,13 +386,13 @@ function initializeUserState(guesserName) {
     themes: guesserData.selectedThemesObject,
     assignedWord: guesserAssignedWord,
     boardLayout: finalBoardLayout,
-    guesses: {},
-    themeGuesses: {},
-    scores: {
-      correctGuesses: 0,
-      correctCategories: 0,
-      total: 0
-    }
+      guesses: {},
+      themeGuesses: {},
+      scores: {
+        correctGuesses: 0,
+        correctCategories: 0,
+        total: 0
+      }
   };
   
   userStates.set(guesserName, userState);
@@ -218,7 +401,28 @@ function initializeUserState(guesserName) {
 
 // Auth and word assignment
 app.post('/api/login', (req, res) => {
-  const { name } = req.body;
+  const { name, password } = req.body;
+  
+  // Check if user is an admin and requires password
+  if (adminUsers[name]) {
+    if (password !== adminUsers[name].password) {
+      return res.status(401).json({ 
+        success: false, 
+        requiresPassword: true,
+        message: 'Password required for admin user' 
+      });
+    }
+    
+    // Password is correct for admin
+    const userState = initializeUserState(name);
+    return res.json({ 
+      success: true,
+      isAdmin: true,
+      word: userState.assignedWord
+    });
+  }
+  
+  // Regular user authentication
   if (names.includes(name)) {
     const userState = initializeUserState(name);
     if (userState) {
@@ -240,6 +444,12 @@ app.get('/api/names', (req, res) => {
   const userName = req.query.name;
   if (userName && userStates.has(userName)) { // Should be initialized by login
     const userState = userStates.get(userName);
+    
+    // For admin users, return admin status instead of board layout
+    if (userState.isAdmin) {
+      return res.json({ isAdmin: true });
+    }
+    
     res.json(userState.boardLayout);
   } else if (userName && !userStates.has(userName)) {
      // This case might occur if login failed or state not ready
@@ -247,6 +457,11 @@ app.get('/api/names', (req, res) => {
     if (names.includes(userName)) {
         const userState = initializeUserState(userName);
         if (userState) {
+            // For admin users, return admin status instead of board layout
+            if (userState.isAdmin) {
+              return res.json({ isAdmin: true });
+            }
+            
             res.json(userState.boardLayout);
             return;
         }
@@ -304,10 +519,6 @@ app.post('/api/theme', async (req, res) => {
     guessedTheme.toLowerCase().includes(themeKey.toLowerCase()) || 
     themeKey.toLowerCase().includes(guessedTheme.toLowerCase())
   );
-  
-   console.log(actualThemeKey); // User's debug log
-   console.log(userState);   // User's debug log
-   console.log(guessedTheme); // User's debug log
     
   if (!actualThemeKey) {
     return res.status(400).json({ correct: false, message: "Theme not recognized for this user." });
@@ -343,66 +554,88 @@ app.get('/api/teams', (req, res) => {
 });
 
 // Function to calculate team scores from individual scores
-function calculateTeamScores() {
-  const teamScores = {};
-  
-  Object.keys(teamAssignments).forEach(team => {
-    teamScores[team] = {
-      events: {
-        Assassins: 0,
-        'Name Game': 0,
-        Grapes: 0,
-        'Flip Cup': 0,
-        'Finish the Lyric': 0,
-        'Mini Games': 0,
-        'Water Balloon Toss': 0,
-        'Amazing Race': 0,
-        'Relay Race': 0
+async function calculateTeamScores() {
+  try {
+    // Get the most up-to-date event scores
+    const currentEventScores = await readEventScoresFile();
+    
+    const teamScores = { ...currentEventScores };
+    
+    // Add Assassins scores from individual scores
+    Object.entries(globalScores).forEach(([playerName, scores]) => {
+      const team = Object.entries(teamAssignments).find(([_, members]) => 
+        members.includes(playerName)
+      )?.[0];
+
+      if (team && teamScores[team] && scores && typeof scores.total === 'number') {
+        teamScores[team].events.Assassins = (teamScores[team].events.Assassins || 0) + scores.total;
       }
-    };
-  });
+    });
 
-  Object.entries(globalScores).forEach(([playerName, scores]) => {
-    const team = Object.entries(teamAssignments).find(([_, members]) => 
-      members.includes(playerName)
-    )?.[0];
-
-    if (team && teamScores[team] && scores && typeof scores.total === 'number') {
-      teamScores[team].events.Assassins += scores.total;
-    }
-  });
-
-  return teamScores;
+    return teamScores;
+  } catch (error) {
+    console.error('Error calculating team scores:', error);
+    return {};
+  }
 }
 
 // Get team scores
-app.get('/api/scores', (req, res) => {
-  const scores = calculateTeamScores();
+app.get('/api/scores', async (req, res) => {
+  const scores = await calculateTeamScores();
   res.json(scores);
 });
 
-// Update scores for a specific event (outside Assassins game)
-app.post('/api/scores/update', (req, res) => {
-  const { team, event, score } = req.body;
+// Update scores for a specific event
+app.post('/api/scores/update', async (req, res) => {
+  const { name, team, event, score, isMinigame } = req.body;
   
-  // This endpoint seems to be for manually updating non-Assassins scores.
-  // It reads current team scores, updates one, but doesn't persist it to a file.
-  // This might need its own persistence mechanism if these scores are meant to be saved.
-  // For now, it recalculates Assassins scores and then overwrites one event.
-  const currentTeamScores = calculateTeamScores(); // Includes Assassins scores from globalScores
-  
-  if (!currentTeamScores[team] || !currentTeamScores[team].events.hasOwnProperty(event)) {
-    return res.status(400).json({ error: 'Invalid team or event' });
+  // Check if user is admin
+  const userState = userStates.get(name);
+  if (!userState || !userState.isAdmin) {
+    return res.status(403).json({ error: 'Unauthorized: Admin access required' });
   }
-
-  currentTeamScores[team].events[event] = parseInt(score, 10) || 0;
-  // Note: This modification is in-memory for this request's response.
-  // If these event scores need to persist across server restarts, they need to be saved.
-  // For now, this only affects the response of this specific call.
-  // It does not update `globalScores` (which are individual assassins scores).
-  res.json({ success: true, scores: currentTeamScores });
+  
+  try {
+    // Load current scores
+    const currentScores = await readEventScoresFile();
+    
+    if (!currentScores[team]) {
+      return res.status(400).json({ error: 'Invalid team' });
+    }
+    
+    // Update score in the correct category
+    if (isMinigame) {
+      if (!miniGames.includes(event)) {
+        return res.status(400).json({ error: 'Invalid mini game' });
+      }
+      currentScores[team].miniGames[event] = parseInt(score, 10) || 0;
+    } else {
+      if (!eventNames.includes(event)) {
+        return res.status(400).json({ error: 'Invalid event' });
+      }
+      currentScores[team].events[event] = parseInt(score, 10) || 0;
+    }
+    
+    // Save updated scores
+    await writeEventScoresFile(currentScores);
+    
+    // Return updated scores
+    res.json({ success: true, scores: currentScores });
+  } catch (error) {
+    console.error('Error updating scores:', error);
+    res.status(500).json({ error: 'Failed to update scores' });
+  }
 });
 
+// Get event and minigame configuration
+app.get('/api/config/events', (req, res) => {
+  res.json({
+    events: eventNames,
+    miniGames: miniGames,
+    scoringOptions: scoringOptions,
+    teams: Object.keys(teamAssignments)
+  });
+});
 
 // Add an endpoint to get team-specific scores
 app.get('/api/teams/:team/scores', (req, res) => {
@@ -451,11 +684,39 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+// Get user's team
+app.get('/api/user/team', (req, res) => {
+  const { name } = req.query;
+  
+  if (!name) {
+    return res.status(400).json({ error: 'Name parameter is required' });
+  }
+  
+  // Check if user is admin
+  if (adminUsers[name]) {
+    return res.json({ isAdmin: true });
+  }
+  
+  // Find which team the player belongs to
+  let playerTeam = null;
+  Object.entries(teamAssignments).forEach(([team, players]) => {
+    if (players.includes(name)) {
+      playerTeam = team;
+    }
+  });
+  
+  if (playerTeam) {
+    res.json({ team: playerTeam });
+  } else {
+    res.status(404).json({ error: 'Player not found in any team' });
+  }
+});
+
 // Only start the server if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 }
 
 // Export functions for testing

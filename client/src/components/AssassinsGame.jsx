@@ -10,6 +10,8 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import Confetti from 'react-confetti';
 
 import { API_URL } from '../config';
 
@@ -30,8 +32,20 @@ export default function AssassinsGame() {
     }
   });
   const [themeGuesses, setThemeGuesses] = useState(Array(5).fill(''));
-  const [themeResults, setThemeResults] = useState(Array(5).fill(null));
-  const [themeCorrectGuesses, setThemeCorrectGuesses] = useState(Array(5).fill(''));
+  const [themeResults, setThemeResults] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('assassinsThemeResults')) || Array(5).fill(null);
+    } catch {
+      return Array(5).fill(null);
+    }
+  });
+  const [themeCorrectGuesses, setThemeCorrectGuesses] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('assassinsThemeCorrectGuesses')) || Array(5).fill('');
+    } catch {
+      return Array(5).fill('');
+    }
+  });
   const [error, setError] = useState('');
   // Track wrong guesses for animation
   const [wrongGuesses, setWrongGuesses] = useState({});
@@ -43,6 +57,16 @@ export default function AssassinsGame() {
     correctCategories: 0,
     total: 0
   });
+  const [playerTeam, setPlayerTeam] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  });
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 });
+  const [recentlyGuessed, setRecentlyGuessed] = useState({});
 
   // Get user info from localStorage
   const name = localStorage.getItem('userName');
@@ -52,6 +76,41 @@ export default function AssassinsGame() {
   const columns = Array.from({ length: 5 }, (_, col) =>
     Array.from({ length: 4 }, (_, row) => names[col * 4 + row] || '')
   );
+
+  // Countdown timer effect
+  useEffect(() => {
+    // Set the end time for the game - June 6th at 10pm EST
+    const endTime = new Date('2025-06-06T22:00:00-04:00');
+    
+    const updateTimer = () => {
+      const now = new Date();
+      const diff = endTime - now;
+      
+      if (diff <= 0) {
+        // Game has ended
+        setTimeRemaining({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      // Calculate days, hours, minutes, and seconds
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      // Update state with the new time remaining
+      setTimeRemaining({ days, hours, minutes, seconds });
+    };
+    
+    // Update immediately
+    updateTimer();
+    
+    // Update every second
+    const timerId = setInterval(updateTimer, 1000);
+    
+    // Cleanup
+    return () => clearInterval(timerId);
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/api/names?name=${encodeURIComponent(name)}`)
@@ -63,6 +122,18 @@ export default function AssassinsGame() {
       .catch(error => {
         console.error('Error fetching names:', error);
         setError('Failed to load names. Please refresh the page.');
+      });
+      
+    // Fetch player's team
+    fetch(`${API_URL}/api/user/team?name=${encodeURIComponent(name)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.team) {
+          setPlayerTeam(data.team);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching team:', error);
       });
   }, [name]);
 
@@ -150,6 +221,7 @@ export default function AssassinsGame() {
       const newResults = [...themeResults];
       newResults[colIdx] = data.correct;
       setThemeResults(newResults);
+      localStorage.setItem('assassinsThemeResults', JSON.stringify(newResults));
       
       if (data.correct) {
         setScores(data.scores);
@@ -157,8 +229,30 @@ export default function AssassinsGame() {
         setThemeCorrectGuesses(prev => {
           const next = [...prev];
           next[colIdx] = theme;
+          localStorage.setItem('assassinsThemeCorrectGuesses', JSON.stringify(next));
           return next;
         });
+        
+        // Trigger confetti animation only for new correct guesses
+        setRecentlyGuessed(prev => ({ ...prev, [colIdx]: true }));
+        const tableCell = document.querySelector(`#theme-cell-${colIdx}`);
+        if (tableCell) {
+          const rect = tableCell.getBoundingClientRect();
+          setConfettiPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+          });
+          setShowConfetti(true);
+          setTimeout(() => {
+            setShowConfetti(false);
+            // Clear the recently guessed flag after animation
+            setRecentlyGuessed(prev => {
+              const next = { ...prev };
+              delete next[colIdx];
+              return next;
+            });
+          }, 3000);
+        }
       } else {
         // Set wrong guess animation state for theme
         setWrongThemeGuesses(prev => ({ ...prev, [colIdx]: Date.now() }));
@@ -187,6 +281,20 @@ export default function AssassinsGame() {
     animation: 'fadeRed 1s',
     borderColor: '#f44336',
   };
+  
+  // Custom animation for correct guess
+  const correctGuessAnimation = {
+    '@keyframes correctGuessAnimation': {
+      '0%': { transform: 'scale(1)', backgroundColor: '#e8f5e9' },
+      '50%': { transform: 'scale(1.05)', backgroundColor: '#a5d6a7' },
+      '100%': { transform: 'scale(1)', backgroundColor: '#e8f5e9' }
+    },
+    animation: 'correctGuessAnimation 0.6s ease-in-out',
+    backgroundColor: '#e8f5e9',
+    borderRadius: '4px',
+    padding: '8px',
+    transition: 'all 0.3s'
+  };
 
   if (!name || !assignedWord) {
     return (
@@ -200,10 +308,38 @@ export default function AssassinsGame() {
 
   return (
     <Box display="flex" flexDirection="column" gap={3} sx={{ m: 1, mb: 5 }}>
+      {/* Confetti effect */}
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={200}
+          confettiSource={{
+            x: confettiPosition.x,
+            y: confettiPosition.y,
+            w: 10,
+            h: 10
+          }}
+        />
+      )}
+      
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h4" color="primary" fontWeight="bold" align="center" sx={{ mb: 2 }}>
           Wedding Assassins Game
         </Typography>
+        
+        <Box sx={{ mb: 2, textAlign: 'center' }}>
+          <Typography variant="h6" color="secondary" fontWeight="bold">
+            Welcome, {name}!
+          </Typography>
+          {playerTeam && (
+            <Typography variant="body1" color="text.secondary">
+              You're playing for {playerTeam}
+            </Typography>
+          )}
+        </Box>
+        
         <Typography variant="h6" color="primary" gutterBottom fontWeight="bold">
           Description
         </Typography>
@@ -211,6 +347,7 @@ export default function AssassinsGame() {
           Every guest has been given a code word. Find the guests displayed in your list and enter their word into the box with their name. Each successful entry will earn 1 point for your team. Once you have collected all four words in a column, earn your team an additional 4 points by correctly identifying the theme of that column.
         </Typography>
       </Paper>
+      
       
       <Paper elevation={3} sx={{ p: 2, textAlign: 'center' }}>
         <Typography variant="h5" fontWeight="bold" color="primary" mb={2}>
@@ -296,7 +433,15 @@ export default function AssassinsGame() {
                       {cellName ? (
                         reveal ? (
                           guessed ? (
-                            <Typography fontWeight="bold" color="success.main" fontSize="1.1rem">
+                            <Typography 
+                              fontWeight="bold" 
+                              color="success.main" 
+                              fontSize="1.1rem"
+                              sx={{
+                                ...correctGuessAnimation,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                              }}
+                            >
                               {guessed}
                             </Typography>
                           ) : (
@@ -345,6 +490,7 @@ export default function AssassinsGame() {
               {columns.map((col, colIdx) => (
                 <TableCell
                   key={colIdx}
+                  id={`theme-cell-${colIdx}`}
                   align="center"
                   sx={{ 
                     borderTop: '4px solid #666',
@@ -356,7 +502,17 @@ export default function AssassinsGame() {
                 >
                   <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
                     {themeResults[colIdx] === true ? (
-                      <Typography color="success.main" fontWeight="bold">
+                      <Typography 
+                        color="success.main" 
+                        fontWeight="bold"
+                        sx={{
+                          ...correctGuessAnimation,
+                          animation: recentlyGuessed[colIdx] ? 'correctGuessAnimation 0.6s ease-in-out' : 'none',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          width: '100%',
+                          textAlign: 'center'
+                        }}
+                      >
                         Category correct: {themeCorrectGuesses[colIdx]}
                       </Typography>
                     ) : (
@@ -421,6 +577,19 @@ export default function AssassinsGame() {
               {scores.total}
             </Typography>
           </Box>
+        </Box>
+      </Paper>
+      {/* Countdown Timer */}
+      <Paper elevation={3} sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
+        <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
+          {/* <AccessTimeIcon color="primary" /> */}
+          <Typography variant="h6" color="primary" fontWeight="bold">
+            {timeRemaining.days > 0 ? (
+              `Game Ends In: ${timeRemaining.days}d ${String(timeRemaining.hours).padStart(2, '0')}h ${String(timeRemaining.minutes).padStart(2, '0')}m ${String(timeRemaining.seconds).padStart(2, '0')}s`
+            ) : (
+              `Game Ends In: ${String(timeRemaining.hours).padStart(2, '0')}:${String(timeRemaining.minutes).padStart(2, '0')}:${String(timeRemaining.seconds).padStart(2, '0')}`
+            )}
+          </Typography>
         </Box>
       </Paper>
     </Box>

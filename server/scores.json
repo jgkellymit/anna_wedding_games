@@ -1,32 +1,7 @@
 {
-  "Susan Kelly": {
-    "correctGuesses": 1,
-    "correctCategories": 0,
-    "total": 1
-  },
   "Ryan Barrett": {
-    "correctGuesses": 3,
-    "correctCategories": 0,
-    "total": 3
-  },
-  "Jack Larch": {
     "correctGuesses": 1,
     "correctCategories": 0,
     "total": 1
-  },
-  "Robbie Kennedy": {
-    "correctGuesses": 1,
-    "correctCategories": 0,
-    "total": 1
-  },
-  "Erika DiPasquale": {
-    "correctGuesses": 8,
-    "correctCategories": 1,
-    "total": 12
-  },
-  "Colin Kunze": {
-    "correctGuesses": 6,
-    "correctCategories": 1,
-    "total": 10
   }
 }

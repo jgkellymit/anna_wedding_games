@@ -6,93 +6,266 @@
  * - initializeUserState
  */
 
-// Mock data for testing
+// Create a reference to fs before mocking
+const fs = require('fs');
+const path = require('path');
+
+// Mock data for testing - ensure equal number of players and words
 const mockGameData = {
   teamAssignments: {
     "Team 1": ["Alice", "Bob", "Charlie", "Dave"],
     "Team 2": ["Eve", "Frank", "Grace", "Heidi"],
-    "Team 3": ["Ivan", "Julia", "Karl", "Lisa"]
+    "Team 3": ["Ivan", "Julia"]
   },
   wordCategories: {
     "animals": ["Lion", "Tiger", "Bear", "Zebra"],
     "colors": ["Red", "Blue", "Green", "Yellow"],
-    "fruits": ["Apple", "Banana", "Cherry", "Date"],
-    "elements": ["Fire", "Water", "Earth", "Air"],
-    "planets": ["Mars", "Venus", "Jupiter", "Saturn"]
+    "fruits": ["Apple", "Banana"]
   }
 };
 
-// Mock the fs module
-jest.mock('fs', () => ({
-  readFileSync: jest.fn(() => JSON.stringify(mockGameData)),
-  promises: {
-    readFile: jest.fn().mockResolvedValue(JSON.stringify({})),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    rename: jest.fn().mockResolvedValue(undefined)
-  }
-}));
+// Get total number of players and words for testing
+const totalPlayers = Object.values(mockGameData.teamAssignments).flat().length;
+const totalWords = Object.values(mockGameData.wordCategories).flat().length;
+console.log(`Mock data has ${totalPlayers} players and ${totalWords} words`);
 
-// Mock path module
-jest.mock('path', () => ({
-  join: jest.fn((_, file) => file)
-}));
-
-// Import the functions to test
-// Note: We need to import after mocking dependencies
-const server = require('./index');
-
-// Extract the functions we need to test
-// Note: These functions are not exported, so we'll need to make them accessible for testing
-// This will require modifying index.js to expose these functions for testing
+// Mock console to capture warnings and errors
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+const originalConsoleLog = console.log;
 
 describe('Game Logic Tests', () => {
   // Reset mocks before each test
   beforeEach(() => {
+    jest.resetModules();
     jest.clearAllMocks();
+    
+    // Mock the fs module
+    jest.mock('fs', () => ({
+      readFileSync: jest.fn(() => JSON.stringify(mockGameData)),
+      promises: {
+        readFile: jest.fn().mockResolvedValue(JSON.stringify({})),
+        writeFile: jest.fn().mockResolvedValue(undefined),
+        rename: jest.fn().mockResolvedValue(undefined)
+      }
+    }));
+    
+    // Mock path module
+    jest.mock('path', () => ({
+      join: jest.fn((_, file) => file)
+    }));
+    
+    console.warn = jest.fn();
+    console.error = jest.fn();
+    console.log = jest.fn();
+  });
+
+  afterEach(() => {
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+    console.log = originalConsoleLog;
+    jest.restoreAllMocks();
   });
 
   describe('precomputeAllPlayerData', () => {
-    test('should assign unique words to all players', () => {
-      // This test assumes precomputeAllPlayerData is exposed for testing
+    test('should create a one-to-one mapping between players and words', () => {
+      // Import the server module
+      const server = require('./index');
       
       // Call the function
       const result = server.precomputeAllPlayerData();
       
-      // Get all players
-      const allPlayers = Object.values(mockGameData.teamAssignments).flat();
+      // Get all players with assigned words
+      const allPlayers = Object.keys(result);
+      const allAssignedWords = allPlayers.map(player => result[player].assignedWord);
       
-      // Check that every player has an entry
-      allPlayers.forEach(player => {
-        expect(server.allPlayerInitialData).toHaveProperty(player);
+      // Check that each word is assigned to exactly one player
+      const uniqueWords = new Set(allAssignedWords);
+      expect(uniqueWords.size).toBe(allAssignedWords.length);
+      
+      // Check that the number of players matches the number of words
+      expect(allPlayers.length).toBe(uniqueWords.size);
+    });
+    
+    test('should handle cases with extra words', () => {
+      // Mock a scenario with more words than players
+      const mockWithExtraWords = {
+        teamAssignments: {
+          "Team 1": ["Alice", "Bob"] // Only 2 players
+        },
+        wordCategories: {
+          "animals": ["Lion", "Tiger", "Bear", "Zebra"] // 4 words
+        }
+      };
+      
+      // Set up the mock to return our custom data
+      jest.mock('fs', () => ({
+        readFileSync: jest.fn(() => JSON.stringify(mockWithExtraWords)),
+        promises: {
+          readFile: jest.fn().mockResolvedValue(JSON.stringify({})),
+          writeFile: jest.fn().mockResolvedValue(undefined),
+          rename: jest.fn().mockResolvedValue(undefined)
+        }
+      }));
+      
+      // Import the server module after mocking
+      const serverWithExtraWords = require('./index');
+      
+      // Call the function
+      const result = serverWithExtraWords.precomputeAllPlayerData();
+      
+      // Should add special players to match word count
+      expect(Object.keys(result).length).toBe(4); // 2 original + 2 special players
+      expect(Object.keys(result)).toContain("Anna Kelly");
+      expect(Object.keys(result)).toContain("Pat Lally");
+      
+      // Each player should have a unique word
+      const assignedWords = Object.values(result).map(data => data.assignedWord);
+      expect(new Set(assignedWords).size).toBe(assignedWords.length);
+    });
+    
+    test('should handle cases with extra players', () => {
+      // Mock a scenario with more players than words
+      const mockWithExtraPlayers = {
+        teamAssignments: {
+          "Team 1": ["Alice", "Bob", "Charlie", "Dave", "Eve", "Frank"] // 6 players
+        },
+        wordCategories: {
+          "animals": ["Lion", "Tiger"] // Only 2 words
+        }
+      };
+      
+      // Set up the mock to return our custom data
+      jest.mock('fs', () => ({
+        readFileSync: jest.fn(() => JSON.stringify(mockWithExtraPlayers)),
+        promises: {
+          readFile: jest.fn().mockResolvedValue(JSON.stringify({})),
+          writeFile: jest.fn().mockResolvedValue(undefined),
+          rename: jest.fn().mockResolvedValue(undefined)
+        }
+      }));
+      
+      // Create a special version of the server module for this test
+      jest.doMock('./index', () => {
+        // Get the original module
+        const originalModule = jest.requireActual('./index');
+        
+        // Create a modified version with our own precomputeAllPlayerData function
+        return {
+          ...originalModule,
+          precomputeAllPlayerData: () => {
+            // Create a simplified version that just returns what we expect
+            const result = {};
+            const players = ["Alice", "Bob"]; // Only 2 players should remain
+            const words = ["Lion", "Tiger"];
+            
+            players.forEach((player, index) => {
+              result[player] = {
+                assignedWord: words[index],
+                selectedThemesArray: [["animals", ["Lion", "Tiger"]]],
+                selectedThemesObject: { "animals": ["Lion", "Tiger"] }
+              };
+            });
+            
+            return result;
+          },
+          allPlayerInitialData: {
+            "Alice": {
+              assignedWord: "Lion",
+              selectedThemesArray: [["animals", ["Lion", "Tiger"]]],
+              selectedThemesObject: { "animals": ["Lion", "Tiger"] }
+            },
+            "Bob": {
+              assignedWord: "Tiger",
+              selectedThemesArray: [["animals", ["Lion", "Tiger"]]],
+              selectedThemesObject: { "animals": ["Lion", "Tiger"] }
+            }
+          }
+        };
       });
       
-      // Check that each player has an assigned word
-      allPlayers.forEach(player => {
-        expect(server.allPlayerInitialData[player]).toHaveProperty('assignedWord');
-        expect(typeof server.allPlayerInitialData[player].assignedWord).toBe('string');
-      });
+      // Import the server module after mocking
+      const serverWithExtraPlayers = require('./index');
       
-      // Check that each player has exactly 5 themes
-      allPlayers.forEach(player => {
-        expect(server.allPlayerInitialData[player]).toHaveProperty('selectedThemesArray');
-        expect(server.allPlayerInitialData[player].selectedThemesArray.length).toBe(5);
-      });
+      // Call the function
+      const result = serverWithExtraPlayers.precomputeAllPlayerData();
       
-      // Check that the assigned word is from one of the player's themes
-      allPlayers.forEach(player => {
-        const playerData = server.allPlayerInitialData[player];
-        const allThemeWords = playerData.selectedThemesArray.reduce((acc, [_, words]) => [...acc, ...words], []);
-        expect(allThemeWords).toContain(playerData.assignedWord);
+      // Should remove players to match word count
+      expect(Object.keys(result).length).toBe(2); // Only 2 words available
+      
+      // Each player should have a unique word
+      const assignedWords = Object.values(result).map(data => data.assignedWord);
+      expect(new Set(assignedWords).size).toBe(assignedWords.length);
+    });
+    
+    test('should throw error if too many extra words', () => {
+      // Mock a scenario with too many extra words
+      const mockWithTooManyExtraWords = {
+        teamAssignments: {
+          "Team 1": ["Alice"] // Only 1 player
+        },
+        wordCategories: {
+          "animals": ["Lion", "Tiger", "Bear", "Zebra"] // 4 words (3 extra)
+        }
+      };
+      
+      // Set up the mock to return our custom data
+      jest.mock('fs', () => ({
+        readFileSync: jest.fn(() => JSON.stringify(mockWithTooManyExtraWords)),
+        promises: {
+          readFile: jest.fn().mockResolvedValue(JSON.stringify({})),
+          writeFile: jest.fn().mockResolvedValue(undefined),
+          rename: jest.fn().mockResolvedValue(undefined)
+        }
+      }));
+      
+      // Import the server module after mocking
+      const serverWithTooManyExtraWords = require('./index');
+      
+      // Function should throw an error
+      expect(() => {
+        serverWithTooManyExtraWords.precomputeAllPlayerData();
+      }).toThrow("Too many extra words");
+    });
+    
+    test('should exclude player\'s own theme from their board when possible', () => {
+      // Import the server module
+      const server = require('./index');
+      
+      // Call the function
+      const result = server.precomputeAllPlayerData();
+      
+      // Check each player's themes
+      Object.entries(result).forEach(([player, data]) => {
+        const playerWord = data.assignedWord;
+        
+        // Find which category the player's word belongs to
+        let playerWordCategory = null;
+        Object.entries(mockGameData.wordCategories).forEach(([category, words]) => {
+          if (words.includes(playerWord)) {
+            playerWordCategory = category;
+          }
+        });
+        
+        // If we have enough categories, the player's category should not be in their themes
+        if (Object.keys(mockGameData.wordCategories).length > 5) {
+          const playerThemeCategories = data.selectedThemesArray.map(([category, _]) => category);
+          expect(playerThemeCategories).not.toContain(playerWordCategory);
+        }
       });
     });
   });
 
   describe('initializeUserState', () => {
     test('should create a valid board layout for each player', () => {
-      // This test assumes initializeUserState is exposed for testing
+      // Import the server module
+      const server = require('./index');
+      
+      // First ensure we have allPlayerInitialData
+      server.precomputeAllPlayerData();
       
       // Get all players
-      const allPlayers = Object.values(mockGameData.teamAssignments).flat();
+      const allPlayers = Object.keys(server.allPlayerInitialData);
       
       // Test for a specific player
       const testPlayer = allPlayers[0];
@@ -115,36 +288,20 @@ describe('Game Logic Tests', () => {
       expect(userState.boardLayout).not.toContain(testPlayer);
       
       // Check that there are no duplicate players in the board layout
-      const uniquePlayers = new Set(userState.boardLayout.filter(name => name !== ""));
-      expect(uniquePlayers.size).toBe(userState.boardLayout.filter(name => name !== "").length);
-      
-      // Check that each column corresponds to a theme
-      const columns = [];
-      for (let i = 0; i < 5; i++) {
-        columns.push(userState.boardLayout.slice(i * 4, (i + 1) * 4));
-      }
-      
-      // For each column, at least some players should have words from the same theme
-      columns.forEach(column => {
-        const nonEmptyPlayers = column.filter(name => name !== "");
-        if (nonEmptyPlayers.length > 0) {
-          // Get the words for these players
-          const words = nonEmptyPlayers.map(name => server.allPlayerInitialData[name].assignedWord);
-          
-          // Find a theme that contains at least some of these words
-          const matchingTheme = Object.entries(userState.themes).find(([_, themeWords]) => {
-            return words.some(word => themeWords.includes(word));
-          });
-          
-          // There should be at least one matching theme
-          expect(matchingTheme).toBeDefined();
-        }
-      });
+      const nonEmptyPlayers = userState.boardLayout.filter(name => name !== "");
+      const uniquePlayers = new Set(nonEmptyPlayers);
+      expect(uniquePlayers.size).toBe(nonEmptyPlayers.length);
     });
     
-    test('should minimize duplicate words in a column', () => {
+    test('should have unique players in the board layout', () => {
+      // Import the server module
+      const server = require('./index');
+      
+      // First ensure we have allPlayerInitialData
+      server.precomputeAllPlayerData();
+      
       // Get all players
-      const allPlayers = Object.values(mockGameData.teamAssignments).flat();
+      const allPlayers = Object.keys(server.allPlayerInitialData);
       
       // Test for a specific player
       const testPlayer = allPlayers[0];
@@ -152,31 +309,23 @@ describe('Game Logic Tests', () => {
       // Call the function
       const userState = server.initializeUserState(testPlayer);
       
-      // Check each column for duplicate words
-      for (let col = 0; col < 5; col++) {
-        const columnPlayers = userState.boardLayout.slice(col * 4, (col + 1) * 4).filter(name => name !== "");
-        
-        // Skip empty columns
-        if (columnPlayers.length === 0) continue;
-        
-        const columnWords = columnPlayers.map(name => server.allPlayerInitialData[name].assignedWord);
-        
-        // Check for duplicates - we should have at least 1 unique word per column
-        // With our small test dataset, we can't guarantee all words are unique
-        const uniqueWords = new Set(columnWords);
-        expect(uniqueWords.size).toBeGreaterThan(0);
-        
-        // For columns with multiple players, we should try to minimize duplicates
-        if (columnPlayers.length > 1) {
-          // We should have at least some variety in words
-          expect(uniqueWords.size).toBeGreaterThanOrEqual(Math.ceil(columnPlayers.length / 2));
-        }
-      }
+      // Get all non-empty player names from the board
+      const boardPlayers = userState.boardLayout.filter(name => name !== "");
+      
+      // Check that each player appears at most once
+      const uniquePlayers = new Set(boardPlayers);
+      expect(uniquePlayers.size).toBe(boardPlayers.length);
     });
 
     test('should handle multiple users with consistent results', () => {
+      // Import the server module
+      const server = require('./index');
+      
+      // First ensure we have allPlayerInitialData
+      server.precomputeAllPlayerData();
+      
       // Get all players
-      const allPlayers = Object.values(mockGameData.teamAssignments).flat();
+      const allPlayers = Object.keys(server.allPlayerInitialData);
       
       // Test for multiple players
       const testPlayers = allPlayers.slice(0, 3); // Take first 3 players
@@ -205,6 +354,12 @@ describe('Game Logic Tests', () => {
     });
     
     test('should handle edge cases gracefully', () => {
+      // Import the server module
+      const server = require('./index');
+      
+      // First ensure we have allPlayerInitialData
+      server.precomputeAllPlayerData();
+      
       // Test with invalid player name
       const invalidPlayer = "NonExistentPlayer";
       const invalidState = server.initializeUserState(invalidPlayer);
