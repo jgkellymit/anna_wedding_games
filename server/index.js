@@ -6,12 +6,17 @@ const fsPromises = fs.promises;
 
 const app = express();
 
+// Create a list of allowed origins, explicitly checking FRONTEND_URL to avoid undefined values
 const allowedOrigins = [
   'http://localhost:5173',
   'http://192.168.0.156:5173',
-  process.env.FRONTEND_URL,
   'https://anna-and-pat-wedding.onrender.com'
-].filter(Boolean);  // Remove any undefined values
+];
+
+// Only add FRONTEND_URL if it's properly defined
+if (process.env.FRONTEND_URL && typeof process.env.FRONTEND_URL === 'string') {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 const corsOptions = {
   origin: function (origin, callback) {
