@@ -47,18 +47,22 @@ if (process.env.NODE_ENV === 'production') {
     console.error('Error setting up static file serving:', error);
   }
 
-  // Handle React routing, return all requests to React app
-  // Use express.Router() to delay route registration until after debugging
-  const router = express.Router();
-  router.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-  });
-  
-  // Apply router after all other routes have been defined
-  // This will be the last middleware applied in the file
-  process.nextTick(() => {
-    console.log('Registering catch-all route for client-side routing');
-    app.use(router);
+  // Instead of using a wildcard route that could trigger path-to-regexp,
+  // create a simple catch-all handler with a middleware
+  console.log('Setting up simple fallback middleware for client-side routing');
+  app.use((req, res, next) => {
+    // Skip for API requests
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
+    try {
+      console.log(`Fallback middleware handling: ${req.path}`);
+      res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+    } catch (error) {
+      console.error('Error in fallback middleware:', error);
+      next(error);
+    }
   });
 }
 
@@ -69,9 +73,31 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 10000; // Use 10000 as default to match Render config
 
-// Load game data from file
-const gameData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data.json'), 'utf8'));
-const { teamAssignments, wordCategories } = gameData;
+// Load game data from file with error handling
+let gameData = {};
+let teamAssignments = {};
+let wordCategories = {};
+
+try {
+  console.log('Loading game data from file...');
+  const dataPath = path.join(__dirname, 'data.json');
+  console.log('Data file path:', dataPath);
+  
+  const dataContent = fs.readFileSync(dataPath, 'utf8');
+  console.log('Successfully read data file');
+  
+  gameData = JSON.parse(dataContent);
+  console.log('Successfully parsed game data JSON');
+  
+  teamAssignments = gameData.teamAssignments || {};
+  wordCategories = gameData.wordCategories || {};
+  console.log('Extracted teamAssignments and wordCategories from game data');
+} catch (error) {
+  console.error('Error loading game data:', error);
+  // Provide fallbacks if data can't be loaded
+  teamAssignments = {};
+  wordCategories = {};
+}
 
 // Admin users
 const adminUsers = {
