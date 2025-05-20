@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=test jest",
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "node index.js",
+    "heroku-postbuild": "cd ../client && npm install && npm run build"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -13,5 +15,9 @@
   },
   "devDependencies": {
     "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=14.x",
+    "npm": ">=6.x"
   }
-} 
+}

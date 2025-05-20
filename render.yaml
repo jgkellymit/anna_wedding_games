@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: wedding-field-day-game
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        value: https://wedding-field-day-game.onrender.com  # Update this after deployment
+    plan: free

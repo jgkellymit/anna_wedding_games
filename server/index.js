@@ -9,8 +9,9 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://192.168.0.156:5173',
-  process.env.FRONTEND_URL
-];
+  process.env.FRONTEND_URL,
+  'https://wedding-field-day-game.onrender.com'  // Add your Render frontend URL here
+].filter(Boolean);  // Remove any undefined values
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -29,12 +30,22 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Serve static files from the React app in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  // Handle React routing, return all requests to React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  });
+}
+
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000; // Use 10000 as default to match Render config
 
 // Load game data from file
 const gameData = JSON.parse(fs.readFileSync(path.join(__dirname, 'data.json'), 'utf8'));

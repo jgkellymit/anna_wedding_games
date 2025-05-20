@@ -11,7 +11,15 @@
   "scripts": {
     "test": "cd server && npm test",
     "test:server": "cd server && npm test",
-    "test:client": "cd client && npm test"
+    "test:client": "cd client && npm test",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "build": "cd client && npm run build",
+    "start": "cd server && node index.js",
+    "heroku-postbuild": "npm run build"
+  },
+  "engines": {
+    "node": ">=14.x",
+    "npm": ">=6.x"
   },
   "keywords": [],
   "author": "",
