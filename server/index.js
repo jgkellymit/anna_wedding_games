@@ -34,13 +34,31 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Add debug logging to trace initialization steps
+console.log('Starting server initialization...');
+
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  
+  console.log('Setting up static file serving for production mode');
+  try {
+    app.use(express.static(path.join(__dirname, '../client/dist')));
+    console.log('Successfully set up static file serving');
+  } catch (error) {
+    console.error('Error setting up static file serving:', error);
+  }
+
   // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
+  // Use express.Router() to delay route registration until after debugging
+  const router = express.Router();
+  router.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+  });
+  
+  // Apply router after all other routes have been defined
+  // This will be the last middleware applied in the file
+  process.nextTick(() => {
+    console.log('Registering catch-all route for client-side routing');
+    app.use(router);
   });
 }
 
@@ -167,6 +185,8 @@ async function writeEventScoresFile(scores) {
   await fsPromises.rename(tempPath, finalPath);
 }
 
+console.log('Setting up global variables...');
+
 // Initialize scores from file or create new if doesn't exist
 let globalScores = {};
 let eventScores = {};
@@ -291,10 +311,15 @@ function precomputeAllPlayerData() {
 }
 
 async function initializeServerState() {
+  console.log('Starting server state initialization...');
   try {
+    console.log('Reading scores file...');
     globalScores = await readScoresFile();
+    console.log('Reading event scores file...');
     eventScores = await readEventScoresFile();
+    console.log('Precomputing player data...');
     precomputeAllPlayerData(); // This needs 'names' and 'wordCategories' to be loaded
+    console.log('Server state initialized successfully');
   } catch (error) {
     console.error('Error initializing server state:', error);
     globalScores = {};
@@ -302,7 +327,14 @@ async function initializeServerState() {
     // Handle potential errors in precomputeAllPlayerData if necessary
   }
 }
-initializeServerState();
+
+// Initialize server state immediately
+console.log('Calling initializeServerState...');
+initializeServerState().then(() => {
+  console.log('Server state initialization complete');
+}).catch(err => {
+  console.error('Error during server state initialization:', err);
+});
 
 
 // Function to initialize user state
@@ -414,8 +446,9 @@ function initializeUserState(guesserName) {
   return userState;
 }
 
-// Auth and word assignment
-app.post('/api/login', (req, res) => {
+// Auth and word assignment - use safe registration to debug
+console.log('About to register login route');
+safeRegisterRoute('post', '/api/login', (req, res) => {
   const { name, password } = req.body;
   
   // Check if user is an admin and requires password
@@ -735,11 +768,44 @@ app.get('/api/user/team', (req, res) => {
   }
 });
 
+// Define a function to safely register routes with debugging
+function safeRegisterRoute(method, path, handler) {
+  console.log(`Registering ${method} route: ${path}`);
+  try {
+    app[method](path, handler);
+    console.log(`Successfully registered ${method} route: ${path}`);
+  } catch (error) {
+    console.error(`Error registering ${method} route ${path}:`, error);
+    throw error; // Re-throw to stop server initialization
+  }
+}
+
+// Setup error handler for uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION:', error);
+  // Check if it's the path-to-regexp error
+  if (error.message && error.message.includes('Missing parameter name')) {
+    console.error('PATH-TO-REGEXP ERROR DETECTED: This is likely related to a route definition.');
+    console.error('Routes registered so far:', app._router && app._router.stack
+      .filter(r => r.route)
+      .map(r => `${Object.keys(r.route.methods)[0].toUpperCase()} ${r.route.path}`));
+  }
+});
+
 // Only start the server if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  console.log('Starting server...');
+  try {
+    const server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+    
+    server.on('error', (error) => {
+      console.error('SERVER ERROR:', error);
+    });
+  } catch (error) {
+    console.error('ERROR STARTING SERVER:', error);
+  }
 }
 
 // Export functions for testing
