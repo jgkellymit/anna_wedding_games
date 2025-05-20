@@ -54,10 +54,11 @@ export default function Tabs({ activeTab, setActiveTab, onLogout, onLogoutClick,
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
               {!isAdmin && <MenuItem onClick={() => handleTabSelect('assassins')}>Assassins Game</MenuItem>}
-              {!isAdmin && <MenuItem onClick={() => handleTabSelect('leaderboard')}>Assassins Leaderboard</MenuItem>}
+              <MenuItem onClick={() => handleTabSelect('leaderboard')}>Assassins Leaderboard</MenuItem>
               <MenuItem onClick={() => handleTabSelect('info')}>Field Day</MenuItem>
               <MenuItem onClick={() => handleTabSelect('scores')}>Team Scores</MenuItem>
               {isAdmin && <MenuItem onClick={() => handleTabSelect('admin')}>Admin Dashboard</MenuItem>}
+              {isAdmin && <MenuItem onClick={() => handleTabSelect('assassinsAdmin')}>Assassins Admin</MenuItem>}
               <MenuItem divider />
               <MenuItem onClick={onLogoutClick || onLogout} sx={{ color: 'red' }}>Log Out</MenuItem>
             </Menu>

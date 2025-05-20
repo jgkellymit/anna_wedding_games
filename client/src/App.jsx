@@ -12,6 +12,7 @@ import AssassinsGame from './components/AssassinsGame';
 import TeamScores from './components/TeamScores';
 import Leaderboard from './components/Leaderboard';
 import Admin from './components/Admin';
+import AssassinsAdmin from './components/AssassinsAdmin';
 import { API_URL } from './config';
 import './index.css';
 
@@ -99,12 +100,8 @@ function App() {
     setLoggedIn(false);
     setUserName('');
     setIsAdmin(false);
-    localStorage.removeItem('weddingLoggedIn');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('assassinsName');
-    localStorage.removeItem('assassinsAssignedWord');
-    localStorage.removeItem('assassinsBoardLayout');
+    // Clear all localStorage data to prevent cheating
+    localStorage.clear();
   };
 
   // Open dialog instead of logging out immediately
@@ -179,6 +176,9 @@ function App() {
         <DialogTitle>Confirm Logout</DialogTitle>
         <DialogContent>
           Please confirm you are not logging out so that you can cheat and view someone else's word because that would be very uncool!!!
+          <br />
+          <br />
+          LOGGING OUT WILL CAUSE YOU TO LOSE YOUR CURRENT ASSASSINS GAME BOARD PROGRESS!
         </DialogContent>
         <DialogActions>
           <Button onClick={handleLogoutCancel} color="primary">Cancel</Button>
@@ -193,6 +193,7 @@ function App() {
             {activeTab === 'scores' && <TeamScores />}
             {activeTab === 'leaderboard' && <Leaderboard />}
             {activeTab === 'admin' && isAdmin && <Admin playerName={userName} />}
+            {activeTab === 'assassinsAdmin' && isAdmin && <AssassinsAdmin playerName={userName} />}
           </div>
         </div>
       </div>
