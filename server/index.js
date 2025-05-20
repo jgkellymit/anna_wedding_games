@@ -9,8 +9,7 @@ const app = express();
 // Create a list of allowed origins, explicitly checking FRONTEND_URL to avoid undefined values
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://192.168.0.156:5173',
-  'https://anna-and-pat-wedding.onrender.com'
+  'http://192.168.0.156:5173'
 ];
 
 // Only add FRONTEND_URL if it's properly defined
@@ -654,15 +653,23 @@ app.get('/api/config/events', (req, res) => {
 });
 
 // Add an endpoint to get team-specific scores
-app.get('/api/teams/:team/scores', (req, res) => {
-  const { team } = req.params;
-  const scores = calculateTeamScores();
-  
-  if (!scores[team]) {
-    return res.status(404).json({ error: 'Team not found' });
+app.get('/api/teams-scores', (req, res) => {
+  const team = req.query.team;
+  if (!team) {
+    return res.status(400).json({ error: 'Team parameter is required' });
   }
   
-  res.json(scores[team]);
+  // Since calculateTeamScores is async, properly await it
+  calculateTeamScores().then(scores => {
+    if (!scores[team]) {
+      return res.status(404).json({ error: 'Team not found' });
+    }
+    
+    res.json(scores[team]);
+  }).catch(error => {
+    console.error('Error getting team scores:', error);
+    res.status(500).json({ error: 'Failed to fetch team scores' });
+  });
 });
 
 // Add an endpoint to get user scores (for Assassins game)
