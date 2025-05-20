@@ -561,15 +561,21 @@ app.post('/api/guess', async (req, res) => {
   
   const correct = targetInitialData.assignedWord.toLowerCase() === word.toLowerCase();
   if (correct) {
+    // Only award points if this is the first time guessing this word correctly
+    const alreadyGuessedCorrectly = guesserState.guesses[target] !== undefined;
     guesserState.guesses[target] = word;
-    guesserState.scores.correctGuesses += 1;
-    guesserState.scores.total = guesserState.scores.correctGuesses + (guesserState.scores.correctCategories * 4);
     
-    globalScores[guesser] = guesserState.scores; // Update global scores with the guesser's name
-    try {
-      await writeScoresFile(globalScores);
-    } catch (error) {
-      console.error('Error writing scores:', error);
+    if (!alreadyGuessedCorrectly) {
+      // Only increment score for new correct guesses
+      guesserState.scores.correctGuesses += 1;
+      guesserState.scores.total = guesserState.scores.correctGuesses + (guesserState.scores.correctCategories * 4);
+      
+      globalScores[guesser] = guesserState.scores; // Update global scores with the guesser's name
+      try {
+        await writeScoresFile(globalScores);
+      } catch (error) {
+        console.error('Error writing scores:', error);
+      }
     }
   }
   
@@ -791,6 +797,70 @@ app.get('/api/user/team', (req, res) => {
     res.json({ team: playerTeam });
   } else {
     res.status(404).json({ error: 'Player not found in any team' });
+  }
+});
+
+// Add an endpoint to get the assassins game state (admin only)
+app.get('/api/admin/assassins-state', (req, res) => {
+  const { name } = req.query;
+  
+  // Check if user is admin
+  if (!name || !adminUsers[name] || !adminUsers[name].isAdmin) {
+    return res.status(403).json({ error: 'Unauthorized: Admin access required' });
+  }
+  
+  // Filter out admin users and only include necessary data
+  const gameState = Object.entries(allPlayerInitialData)
+    .filter(([playerName, _]) => !adminUsers[playerName])
+    .map(([playerName, data]) => ({
+      name: playerName,
+      assignedWord: data.assignedWord,
+      themes: data.selectedThemesArray.map(([theme, _]) => theme) // Only include theme names
+    }));
+  
+  res.json(gameState);
+});
+
+// Add an endpoint to reset a player's Assassins game score (admin only)
+app.post('/api/admin/reset-assassins-score', async (req, res) => {
+  const { adminName, playerName } = req.body;
+  
+  // Check if user is admin
+  if (!adminName || !adminUsers[adminName] || !adminUsers[adminName].isAdmin) {
+    return res.status(403).json({ success: false, error: 'Unauthorized: Admin access required' });
+  }
+  
+  try {
+    // Reset the user's state if it exists
+    if (userStates.has(playerName)) {
+      const userState = userStates.get(playerName);
+      // Reset scores but maintain the board layout and other data
+      userState.scores = {
+        correctGuesses: 0,
+        correctCategories: 0,
+        total: 0
+      };
+      userState.guesses = {};
+      userState.themeGuesses = {};
+    }
+    
+    // Reset or remove the user from globalScores
+    const currentScores = await readScoresFile();
+    if (currentScores[playerName]) {
+      delete currentScores[playerName]; // Remove the player from scores completely
+      await writeScoresFile(currentScores);
+    }
+    
+    return res.json({ 
+      success: true, 
+      message: `Successfully reset Assassins game score for ${playerName}`
+    });
+  } catch (error) {
+    console.error(`Error resetting score for ${playerName}:`, error);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to reset score. Please try again.' 
+    });
   }
 });
 

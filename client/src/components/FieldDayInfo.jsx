@@ -190,7 +190,7 @@ export default function FieldDayInfo() {
         <Box sx={{ bgcolor: '#f8f8f8', p: 2, borderRadius: 2, mb: 2 }}>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
             <AccessTimeIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
-            Planned time: 1:30 - 1:45, scoring begins at 10:40
+            Planned time: 1:30 - 1:45, scoring begins at 1:40
           </Typography>
           <Typography variant="subtitle2" color="text.secondary" gutterBottom>
             <EmojiEventsIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
