@@ -10,5 +10,5 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://wedding-field-day-game.onrender.com  # Update this after deployment
+        value: https://anna-and-pat-wedding.onrender.com
     plan: free

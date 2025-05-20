@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=test jest",
+    "prestart": "npm install",
     "start": "node index.js",
     "dev": "node index.js",
     "heroku-postbuild": "cd ../client && npm install && npm run build"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "path": "^0.12.7"
   },
   "devDependencies": {
     "jest": "^29.7.0"

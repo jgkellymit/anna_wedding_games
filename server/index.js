@@ -10,7 +10,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://192.168.0.156:5173',
   process.env.FRONTEND_URL,
-  'https://wedding-field-day-game.onrender.com'  // Add your Render frontend URL here
+  'https://anna-and-pat-wedding.onrender.com'
 ].filter(Boolean);  // Remove any undefined values
 
 const corsOptions = {
