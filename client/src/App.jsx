@@ -28,7 +28,10 @@ function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('userName') || '');
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('isAdmin') === 'true');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState('assassins');
+  const [activeTab, setActiveTab] = useState(() => {
+    const isUserAdmin = localStorage.getItem('isAdmin') === 'true';
+    return isUserAdmin ? 'admin' : 'assassins';
+  });
 
   const handleLogin = async (name, providedPassword = null) => {
     try {
@@ -69,6 +72,7 @@ function App() {
         } else {
           setIsAdmin(false);
           localStorage.removeItem('isAdmin');
+          setActiveTab('assassins');
           localStorage.setItem('assassinsName', name);
           localStorage.setItem('assassinsAssignedWord', data.word);
           localStorage.setItem('assassinsBoardLayout', JSON.stringify(data.boardLayout));

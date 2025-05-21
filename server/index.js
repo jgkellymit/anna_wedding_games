@@ -233,6 +233,9 @@ function precomputeAllPlayerData() {
   // Get the list of players (excluding admin users)
   const allPlayers = Object.values(teamAssignments).flat(); // Make a copy to avoid modifying the original
   
+  // Track removed players so we can give them placeholder words later
+  const removedPlayers = [];
+  
   // Check if we have the right number of words and players
   const extraWords = allWords.length - allPlayers.length;
   const extraPlayers = allPlayers.length - allWords.length;
@@ -261,6 +264,8 @@ function precomputeAllPlayerData() {
       const index = allPlayers.indexOf(playerToRemove);
       if (index !== -1) {
         allPlayers.splice(index, 1);
+        // Keep track of removed players
+        removedPlayers.push(playerToRemove);
       } else {
         console.warn(`Player ${playerToRemove} not found in the list, skipping removal`);
       }
@@ -320,6 +325,33 @@ function precomputeAllPlayerData() {
       selectedThemesArray: selectedThemes,
       selectedThemesObject: Object.fromEntries(selectedThemes)
     };
+  });
+  
+  // Handle players that were removed due to word count balancing
+  // Assign them a placeholder word and random themes
+  removedPlayers.forEach(playerName => {
+    // Skip admin users
+    if (adminUsers[playerName]) {
+      return;
+    }
+    
+    // Assign placeholder word
+    const placeholderWord = "_placeholder_";
+    
+    // Randomly select 5 themes
+    const selectedThemes = Object.entries(wordCategories)
+      .map(theme => ({ theme, sortKey: Math.random() }))
+      .sort((a, b) => a.sortKey - b.sortKey)
+      .map(item => item.theme)
+      .slice(0, 5);
+    
+    allPlayerInitialData[playerName] = {
+      assignedWord: placeholderWord,
+      selectedThemesArray: selectedThemes,
+      selectedThemesObject: Object.fromEntries(selectedThemes)
+    };
+    
+    console.log(`Assigned placeholder word and themes to removed player: ${playerName}`);
   });
   
   // Set up admin users with special data
