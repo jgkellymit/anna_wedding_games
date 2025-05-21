@@ -844,11 +844,42 @@ app.post('/api/admin/reset-assassins-score', async (req, res) => {
       userState.themeGuesses = {};
     }
     
-    // Reset or remove the user from globalScores
+    // Reset or remove the user from globalScores and scores.json
+    if (globalScores[playerName]) {
+      delete globalScores[playerName]; // Remove from in-memory scores
+    }
+    
     const currentScores = await readScoresFile();
     if (currentScores[playerName]) {
-      delete currentScores[playerName]; // Remove the player from scores completely
+      delete currentScores[playerName]; // Remove the player from scores file
       await writeScoresFile(currentScores);
+    }
+    
+    // Find the player's team
+    let playerTeam = null;
+    Object.entries(teamAssignments).forEach(([team, members]) => {
+      if (members.includes(playerName)) {
+        playerTeam = team;
+      }
+    });
+    
+    // Reset the player's contribution to their team's Assassins score in event_scores.json
+    if (playerTeam) {
+      const eventScores = await readEventScoresFile();
+      if (eventScores[playerTeam] && eventScores[playerTeam].events && eventScores[playerTeam].events.Assassins) {
+        // Recalculate team's Assassins score by summing the remaining members' scores
+        let teamTotal = 0;
+        
+        Object.entries(globalScores).forEach(([name, scores]) => {
+          if (teamAssignments[playerTeam].includes(name) && name !== playerName && scores && typeof scores.total === 'number') {
+            teamTotal += scores.total;
+          }
+        });
+        
+        // Update the team's Assassins score
+        eventScores[playerTeam].events.Assassins = teamTotal;
+        await writeEventScoresFile(eventScores);
+      }
     }
     
     return res.json({ 
