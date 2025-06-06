@@ -67,7 +67,7 @@ export default function Leaderboard() {
         }}
       >
         <Typography variant="h4" color="primary" gutterBottom fontWeight="bold">
-          Assassins Game Leaderboard
+          Wedding Code Word Game Leaderboard
         </Typography>
         {lastUpdated && (
           <Box 

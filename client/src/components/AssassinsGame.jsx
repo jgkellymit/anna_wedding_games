@@ -331,7 +331,7 @@ export default function AssassinsGame() {
       
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h4" color="primary" fontWeight="bold" align="center" sx={{ mb: 2 }}>
-          Wedding Assassins Game
+          Wedding Code Word Game
         </Typography>
         
         <Box sx={{ mb: 2, textAlign: 'center' }}>
@@ -349,7 +349,7 @@ export default function AssassinsGame() {
           Description
         </Typography>
         <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
-          Every guest has been given a code word. Find the guests displayed in your list and enter their word into the box with their name. Each successful entry will earn 1 point for your team. Once you have collected all four words in a column, earn your team an additional 4 points by correctly identifying the theme of that column. 
+          Every guest has been given a code word. Find the guests displayed in your list and enter their word into the box with their name. Each successful entry will earn 1 point for your team. Once you have collected all four words in a column, earn your team an additional 4 points by correctly identifying the theme of that column. You can not guess guess the theme until you have guessed all four words in the column.
           Example: If you have the words "Corkscrew", "Tornado", "Dance", and "Ankle" in your column, you can guess the theme "things you twist" or just "twist" to earn 4 points for your team.
         </Typography>
       </Paper>

@@ -591,7 +591,7 @@ export default function FieldDayInfo() {
           {/* <Grid item xs={12} sm={6}> */}
             <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
               <ul style={{ marginLeft: 0, paddingLeft: 20 }}>
-                <li>Assassin → Connections: 40 per person = 320</li>
+                <li>Wedding Game/Assassin: 40 per person = 320</li>
                 <li>Name Game: 100</li>
                 <li>Grapes: 100</li>
                 <li>Flip Cup: 100</li>

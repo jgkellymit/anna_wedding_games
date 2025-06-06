@@ -53,8 +53,8 @@ export default function Tabs({ activeTab, setActiveTab, onLogout, onLogoutClick,
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-              <MenuItem onClick={() => handleTabSelect('assassins')}>Assassins Game</MenuItem>
-              <MenuItem onClick={() => handleTabSelect('leaderboard')}>Assassins Leaderboard</MenuItem>
+              <MenuItem onClick={() => handleTabSelect('assassins')}>Wedding Game</MenuItem>
+              <MenuItem onClick={() => handleTabSelect('leaderboard')}>Wedding Game Leaderboard</MenuItem>
               <MenuItem onClick={() => handleTabSelect('info')}>Field Day</MenuItem>
               <MenuItem onClick={() => handleTabSelect('scores')}>Team Scores</MenuItem>
               {isAdmin && <MenuItem onClick={() => handleTabSelect('admin')}>Admin Dashboard</MenuItem>}
