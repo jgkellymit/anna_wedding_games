@@ -188,7 +188,7 @@ function App() {
           Please confirm you are not logging out so that you can cheat and view someone else's word because that would be very uncool!!!
           <br />
           <br />
-          LOGGING OUT WILL CAUSE YOU TO LOSE YOUR CURRENT ASSASSINS GAME BOARD PROGRESS!
+          LOGGING OUT WILL CAUSE YOU TO LOSE YOUR CURRENT WEDDING GAME BOARD PROGRESS!
         </DialogContent>
         <DialogActions>
           <Button onClick={handleLogoutCancel} color="primary">Cancel</Button>

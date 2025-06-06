@@ -398,7 +398,7 @@ function initializeUserState(guesserName) {
     
   // Create a pool of available players, excluding the guesser
   const availablePlayers = Object.keys(allPlayerInitialData)
-    .filter(name => name !== guesserName && !adminUsers[name]);
+    .filter(name => name !== guesserName);
 
   // Set to track players already used on the board
   let usedPlayersOnBoard = new Set([guesserName]);
@@ -634,8 +634,16 @@ async function calculateTeamScores() {
     
     const teamScores = { ...currentEventScores };
     
+    // Read the latest individual scores from file to ensure fresh data
+    const latestGlobalScores = await readScoresFile();
+    
     // Add Assassins scores from individual scores
-    Object.entries(globalScores).forEach(([playerName, scores]) => {
+    Object.entries(latestGlobalScores).forEach(([playerName, scores]) => {
+      // Skip admin users - their scores don't count toward team totals
+      if (adminUsers[playerName]) {
+        return;
+      }
+      
       const team = Object.entries(teamAssignments).find(([_, members]) => 
         members.includes(playerName)
       )?.[0];
