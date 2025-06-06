@@ -10,6 +10,10 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Confetti from 'react-confetti';
 
@@ -67,6 +71,7 @@ export default function AssassinsGame() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiPosition, setConfettiPosition] = useState({ x: 0, y: 0 });
   const [recentlyGuessed, setRecentlyGuessed] = useState({});
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
 
   // Get user info from localStorage
   const name = localStorage.getItem('userName');
@@ -199,7 +204,7 @@ export default function AssassinsGame() {
     const gridWords = columns[colIdx].map(n => guesses[n] || '');
     // Check if all words in the column are guessed
     if (gridWords.some(word => !word)) {
-      setError('You must guess all words in the column before guessing the theme.');
+      setErrorDialogOpen(true);
       return;
     }
 
@@ -335,7 +340,7 @@ export default function AssassinsGame() {
           </Typography>
           {playerTeam && (
             <Typography variant="body1" color="text.secondary">
-              You're playing for {playerTeam}
+              You're playing for Team {playerTeam}
             </Typography>
           )}
         </Box>
@@ -344,7 +349,8 @@ export default function AssassinsGame() {
           Description
         </Typography>
         <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
-          Every guest has been given a code word. Find the guests displayed in your list and enter their word into the box with their name. Each successful entry will earn 1 point for your team. Once you have collected all four words in a column, earn your team an additional 4 points by correctly identifying the theme of that column.
+          Every guest has been given a code word. Find the guests displayed in your list and enter their word into the box with their name. Each successful entry will earn 1 point for your team. Once you have collected all four words in a column, earn your team an additional 4 points by correctly identifying the theme of that column. 
+          Example: If you have the words "Corkscrew", "Tornado", "Dance", and "Ankle" in your column, you can guess the theme "things you twist" or just "twist" to earn 4 points for your team.
         </Typography>
       </Paper>
       
@@ -368,6 +374,21 @@ export default function AssassinsGame() {
           </Typography>
         </Paper>
       )}
+
+      {/* Error Dialog for incomplete column theme guessing */}
+      <Dialog open={errorDialogOpen} onClose={() => setErrorDialogOpen(false)}>
+        <DialogTitle>Cannot Guess Theme</DialogTitle>
+        <DialogContent>
+          <Typography>
+            You must successfully guess all words in the column before guessing the theme.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setErrorDialogOpen(false)} color="primary" variant="contained">
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <TableContainer component={Paper} sx={{
         overflowX: 'auto',
