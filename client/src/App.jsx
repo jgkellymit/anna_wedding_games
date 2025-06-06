@@ -65,6 +65,15 @@ function App() {
         localStorage.setItem('weddingLoggedIn', 'true');
         localStorage.setItem('userName', name);
         
+        // Store assassins game data for all users (including admins)
+        localStorage.setItem('assassinsName', name);
+        if (data.word) {
+          localStorage.setItem('assassinsAssignedWord', data.word);
+        }
+        if (data.boardLayout) {
+          localStorage.setItem('assassinsBoardLayout', JSON.stringify(data.boardLayout));
+        }
+        
         if (data.isAdmin) {
           setIsAdmin(true);
           localStorage.setItem('isAdmin', 'true');
@@ -73,9 +82,6 @@ function App() {
           setIsAdmin(false);
           localStorage.removeItem('isAdmin');
           setActiveTab('assassins');
-          localStorage.setItem('assassinsName', name);
-          localStorage.setItem('assassinsAssignedWord', data.word);
-          localStorage.setItem('assassinsBoardLayout', JSON.stringify(data.boardLayout));
         }
         
         setLoginError('');

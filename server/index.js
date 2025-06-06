@@ -105,9 +105,6 @@ const adminUsers = {
   "Pat Lally": { password: "iamironman", isAdmin: true }
 };
 
-// Generate names list from team assignments and add admin users
-const names = [...Object.values(teamAssignments).flat(), ...Object.keys(adminUsers)];
-
 // Get list of event names from data
 const eventNames = [
   'Assassins',
@@ -149,6 +146,9 @@ const scoringOptions = {
 const userStates = new Map();
 // Global store for precomputed player-specific data (assigned words and their themes)
 let allPlayerInitialData = {};
+
+// Generate names list from team assignments and add admin users
+const names = [...Object.values(teamAssignments).flat(), ...Object.keys(adminUsers)];
 
 // Add proper file locking
 async function readScoresFile() {
@@ -211,8 +211,6 @@ async function writeEventScoresFile(scores) {
   await fsPromises.rename(tempPath, finalPath);
 }
 
-console.log('Setting up global variables...');
-
 // Initialize scores from file or create new if doesn't exist
 let globalScores = {};
 let eventScores = {};
@@ -230,8 +228,8 @@ function precomputeAllPlayerData() {
     });
   });
   
-  // Get the list of players (excluding admin users)
-  const allPlayers = Object.values(teamAssignments).flat(); // Make a copy to avoid modifying the original
+  // Get the list of players (including admin users)
+  const allPlayers = [...Object.values(teamAssignments).flat(), ...Object.keys(adminUsers)];
   
   // Track removed players so we can give them placeholder words later
   const removedPlayers = [];
@@ -239,7 +237,7 @@ function precomputeAllPlayerData() {
   // Check if we have the right number of words and players
   const extraWords = allWords.length - allPlayers.length;
   const extraPlayers = allPlayers.length - allWords.length;
-  
+
   // Handle cases with extra words or players
   if (extraWords > 0) {
     // We have more words than players, add special players
@@ -258,7 +256,7 @@ function precomputeAllPlayerData() {
       throw new Error(`Too many extra players (${extraPlayers}). Maximum allowed is 4.`);
     }
     
-    const playersToRemove = ["Jack Larch", "Michelle Larch", "Anna Kelly", "Pat Lally"];
+    const playersToRemove = ["Anna Kelly", "Pat Lally", "Jack Larch", "Michelle Larch"];
     for (let i = 0; i < extraPlayers; i++) {
       const playerToRemove = playersToRemove[i];
       const index = allPlayers.indexOf(playerToRemove);
@@ -272,30 +270,25 @@ function precomputeAllPlayerData() {
     }
     console.log(`Removed ${extraPlayers} players to match word count`);
   }
-  
+
   // Now we should have equal number of players and words
   if (allPlayers.length !== allWords.length) {
     console.error(`Player count (${allPlayers.length}) does not match word count (${allWords.length}) after adjustments`);
   } else {
     console.log(`Player count (${allPlayers.length}) matches word count (${allWords.length})`);
   }
-  
+
   // Shuffle the words deterministically based on a fixed seed
   const shuffledWords = [...allWords].sort(() => 0.5 - Math.random());
-  
+
   // Assign one word to each player
   const playerWordMap = {};
   allPlayers.forEach((player, index) => {
     playerWordMap[player] = shuffledWords[index];
   });
-  
+
   // For each player, select 5 themes, making sure to exclude the theme containing their word
   allPlayers.forEach(playerName => {
-    // Skip admin users who are not assigned words
-    if (adminUsers[playerName]) {
-      return;
-    }
-    
     const playerWord = playerWordMap[playerName];
     const playerWordCategory = wordToCategory[playerWord];
     
@@ -326,7 +319,7 @@ function precomputeAllPlayerData() {
       selectedThemesObject: Object.fromEntries(selectedThemes)
     };
   });
-  
+
   // Handle players that were removed due to word count balancing
   // Assign them a placeholder word and random themes
   removedPlayers.forEach(playerName => {
@@ -353,17 +346,7 @@ function precomputeAllPlayerData() {
     
     console.log(`Assigned placeholder word and themes to removed player: ${playerName}`);
   });
-  
-  // Set up admin users with special data
-  Object.keys(adminUsers).forEach(adminName => {
-    allPlayerInitialData[adminName] = {
-      isAdmin: true,
-      assignedWord: "Admin", // Special value indicating admin status
-      selectedThemesArray: [],
-      selectedThemesObject: {}
-    };
-  });
-  
+
   console.log("Precomputed initial data for all players.");
   return allPlayerInitialData;
 }
@@ -397,23 +380,8 @@ initializeServerState().then(() => {
 
 // Function to initialize user state
 function initializeUserState(guesserName) {
-  // For admin users, return admin user state
-  if (adminUsers[guesserName]) {
-    const userState = {
-      isAdmin: true,
-      assignedWord: "Admin",
-      boardLayout: [],
-      guesses: {},
-      themeGuesses: {},
-      scores: {
-        correctGuesses: 0,
-        correctCategories: 0,
-        total: 0
-      }
-    };
-    userStates.set(guesserName, userState);
-    return userState;
-  }
+  // For admin users, they should still get a proper game setup, just with admin flag
+  const isAdminUser = adminUsers[guesserName];
 
   if (userStates.has(guesserName)) {
     return userStates.get(guesserName);
@@ -488,6 +456,7 @@ function initializeUserState(guesserName) {
   const finalBoardLayout = boardColumns.flat();
 
   const userState = {
+    isAdmin: isAdminUser, // Set admin flag if applicable
     themes: guesserData.selectedThemesObject,
     assignedWord: guesserAssignedWord,
     boardLayout: finalBoardLayout,
@@ -524,7 +493,8 @@ safeRegisterRoute('post', '/api/login', (req, res) => {
     return res.json({ 
       success: true,
       isAdmin: true,
-      word: userState.assignedWord
+      word: userState.assignedWord,
+      boardLayout: userState.boardLayout
     });
   }
   
@@ -551,11 +521,7 @@ app.get('/api/names', (req, res) => {
   if (userName && userStates.has(userName)) { // Should be initialized by login
     const userState = userStates.get(userName);
     
-    // For admin users, return admin status instead of board layout
-    if (userState.isAdmin) {
-      return res.json({ isAdmin: true });
-    }
-    
+    // Return board layout for all users (including admins) when they have a name parameter
     res.json(userState.boardLayout);
   } else if (userName && !userStates.has(userName)) {
      // This case might occur if login failed or state not ready
@@ -563,11 +529,6 @@ app.get('/api/names', (req, res) => {
     if (names.includes(userName)) {
         const userState = initializeUserState(userName);
         if (userState) {
-            // For admin users, return admin status instead of board layout
-            if (userState.isAdmin) {
-              return res.json({ isAdmin: true });
-            }
-            
             res.json(userState.boardLayout);
             return;
         }
