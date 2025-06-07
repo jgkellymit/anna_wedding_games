@@ -185,9 +185,9 @@
     "total": 40
   },
   "Param Desai": {
-    "correctGuesses": 19,
+    "correctGuesses": 20,
     "correctCategories": 4,
-    "total": 35
+    "total": 36
   },
   "Joshua \"Kaito\" Goroff": {
     "correctGuesses": 8,
@@ -263,5 +263,15 @@
     "correctGuesses": 20,
     "correctCategories": 3,
     "total": 32
+  },
+  "Josh Fung": {
+    "correctGuesses": 20,
+    "correctCategories": 0,
+    "total": 20
+  },
+  "Patrick Laird": {
+    "correctGuesses": 20,
+    "correctCategories": 0,
+    "total": 20
   }
 }
