@@ -400,23 +400,11 @@ export default function FieldDayInfo() {
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ p: 2, bgcolor: '#e3f2fd', borderRadius: 2 }}>
-              <Typography variant="body1" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
-                <SportsTennisIcon fontSize="small" sx={{ mr: 1 }} />
-                <strong>Mini Game 4: Pickleball</strong>
-              </Typography>
-              <Typography variant="body2">
-                2 people per team. Ranking.<br/>
-                Scoring: 50, 40, 30, 20, 10, 0, 0, 0
-              </Typography>
-            </Box>
-          </Grid>
           <Grid item xs={12}>
             <Box sx={{ p: 2, bgcolor: '#e3f2fd', borderRadius: 2 }}>
               <Typography variant="body1" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
                 <ExtensionIcon fontSize="small" sx={{ mr: 1 }} />
-                <strong>Mini Game 5: Speed Puzzle</strong>
+                <strong>Mini Game 4: Speed Puzzle</strong>
               </Typography>
               <Typography variant="body2">
                 3 people per team. Ranking. Each team will do a 250-piece puzzle as fast as possible.<br/>
@@ -565,7 +553,7 @@ export default function FieldDayInfo() {
               <Typography variant="body2">• Disc Golf (1)</Typography>
             </Grid>
             <Grid item xs={6} sm={4}>
-              <Typography variant="body2">• Fire Making (4)</Typography>
+              <Typography variant="body2">• Fire Making (3)</Typography>
             </Grid>
           </Grid>
         </Box>
@@ -585,18 +573,18 @@ export default function FieldDayInfo() {
         </Box>
         <Divider sx={{ mb: 2 }} />
         <Typography variant="body1" sx={{ lineHeight: 1.7, fontWeight: 'bold', mb: 1 }}>
-          Total Possible: 1570 Points
+          Total Possible: 1480 Points
         </Typography>
         {/* <Grid container spacing={2}> */}
           {/* <Grid item xs={12} sm={6}> */}
             <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
               <ul style={{ marginLeft: 0, paddingLeft: 20 }}>
-                <li>Wedding Game/Assassin: 40 per person = 320</li>
+                <li>Wedding Game/Assassin: 40 per person = 280</li>
                 <li>Name Game: 100</li>
                 <li>Grapes: 100</li>
                 <li>Flip Cup: 100</li>
                 <li>Finish The Lyric: 100</li>
-                <li>Mini Games: 50 * 5 games = 250</li>
+                <li>Mini Games: 50 * 4 games = 200</li>
                 <li>Water Balloon Toss: 100</li>
                 <li>Amazing Race: 100</li>
                 <li>Relay: 400</li>

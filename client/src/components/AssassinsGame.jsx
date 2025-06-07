@@ -77,6 +77,12 @@ export default function AssassinsGame() {
   const name = localStorage.getItem('userName');
   const assignedWord = localStorage.getItem('assassinsAssignedWord');
 
+  // Helper function to check if game has ended
+  const isGameEnded = () => {
+    return timeRemaining.days === 0 && timeRemaining.hours === 0 && 
+           timeRemaining.minutes === 0 && timeRemaining.seconds === 0;
+  };
+
   // Build columns for the grid
   const columns = Array.from({ length: 5 }, (_, col) =>
     Array.from({ length: 4 }, (_, row) => names[col * 4 + row] || '')
@@ -375,6 +381,18 @@ export default function AssassinsGame() {
         </Paper>
       )}
 
+      {/* Game Ended Banner */}
+      {isGameEnded() && (
+        <Paper elevation={3} sx={{ p: 3, bgcolor: '#ffebee', border: '2px solid #f44336' }}>
+          <Typography variant="h5" color="error" align="center" fontWeight="bold">
+            🕐 Game Has Ended
+          </Typography>
+          <Typography color="error" align="center" sx={{ mt: 1 }}>
+            The submission deadline has passed. All text inputs have been disabled.
+          </Typography>
+        </Paper>
+      )}
+
       {/* Error Dialog for incomplete column theme guessing */}
       <Dialog open={errorDialogOpen} onClose={() => setErrorDialogOpen(false)}>
         <DialogTitle>Cannot Guess Theme</DialogTitle>
@@ -470,7 +488,7 @@ export default function AssassinsGame() {
                               size="small"
                               variant="outlined"
                               label={cellName}
-                              disabled={cellName === name}
+                              disabled={cellName === name || isGameEnded()}
                               className={wrongGuesses[cellName] ? 'wrong-guess' : ''}
                               value={inputValues[cellName] || ''}
                               onChange={e => {
@@ -480,7 +498,7 @@ export default function AssassinsGame() {
                                 }));
                               }}
                               onKeyDown={e => {
-                                if (e.key === 'Enter' && e.target.value) {
+                                if (e.key === 'Enter' && e.target.value && !isGameEnded()) {
                                   handleGuess(cellName, e.target.value);
                                 }
                               }}
@@ -541,6 +559,7 @@ export default function AssassinsGame() {
                         size="small"
                         variant="outlined"
                         label="Category"
+                        disabled={isGameEnded()}
                         className={wrongThemeGuesses[colIdx] ? 'wrong-guess' : ''}
                         value={themeGuesses[colIdx]}
                         onChange={e => {
@@ -549,7 +568,7 @@ export default function AssassinsGame() {
                           setThemeGuesses(newGuesses);
                         }}
                         onKeyDown={e => {
-                          if (e.key === 'Enter' && themeGuesses[colIdx]) {
+                          if (e.key === 'Enter' && themeGuesses[colIdx] && !isGameEnded()) {
                             handleThemeGuess(colIdx, themeGuesses[colIdx]);
                           }
                         }}
@@ -601,11 +620,13 @@ export default function AssassinsGame() {
         </Box>
       </Paper>
       {/* Countdown Timer */}
-      <Paper elevation={3} sx={{ p: 2, textAlign: 'center', bgcolor: '#f5f5f5' }}>
+      <Paper elevation={3} sx={{ p: 2, textAlign: 'center', bgcolor: isGameEnded() ? '#ffebee' : '#f5f5f5' }}>
         <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
           {/* <AccessTimeIcon color="primary" /> */}
-          <Typography variant="h6" color="primary" fontWeight="bold">
-            {timeRemaining.days > 0 ? (
+          <Typography variant="h6" color={isGameEnded() ? "error" : "primary"} fontWeight="bold">
+            {isGameEnded() ? (
+              "Game Ended - No More Submissions Allowed"
+            ) : timeRemaining.days > 0 ? (
               `Game Ends In: ${timeRemaining.days}d ${String(timeRemaining.hours).padStart(2, '0')}h ${String(timeRemaining.minutes).padStart(2, '0')}m ${String(timeRemaining.seconds).padStart(2, '0')}s`
             ) : (
               `Game Ends In: ${String(timeRemaining.hours).padStart(2, '0')}:${String(timeRemaining.minutes).padStart(2, '0')}:${String(timeRemaining.seconds).padStart(2, '0')}`
