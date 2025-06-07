@@ -20,7 +20,6 @@ const MINI_GAMES = [
   '(M) Spike',
   '(M) Disc Golf',
   '(M) Liars Dice',
-  '(M) Pickleball',
   '(M) Speed Puzzle'
 ];
 
@@ -29,7 +28,6 @@ const MINI_GAMES_ORIGINAL = [
   'Spike',
   'Disc Golf',
   'Liars Dice',
-  'Pickleball',
   'Speed Puzzle'
 ];
 
